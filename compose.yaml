@@ -1,0 +1,29 @@
+services:
+  backend:
+    build: ./backend
+    environment:
+      API_PORT: ${API_PORT:?Set API_PORT in .env}
+      SQLITE_PATH: ${SQLITE_PATH:?Set SQLITE_PATH in .env}
+      LOG_LEVEL: ${LOG_LEVEL:?Set LOG_LEVEL in .env}
+      DEMO_MODE: ${DEMO_MODE:?Set DEMO_MODE in .env}
+    volumes:
+      - sqlite_data:/data
+    healthcheck:
+      test: ["CMD", "/app/api", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+  frontend:
+    build: ./frontend
+    environment:
+      API_PORT: ${API_PORT:?Set API_PORT in .env}
+    ports:
+      - "${APP_PORT:?Set APP_PORT in .env}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  sqlite_data:
