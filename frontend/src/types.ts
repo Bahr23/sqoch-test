@@ -1,4 +1,11 @@
 export type Event = {
+  description: string;
+  category: string;
+  tagline: string;
+  cover_url: string;
+  timezone: string;
+  capacity: number;
+  sold: number;
   id: string;
   title: string;
   date: string;
@@ -15,6 +22,8 @@ export type Participant = {
   price: number;
 };
 export type Checkout = {
+  event_id: string;
+  event?: Event;
   id: string;
   email: string;
   participants: Participant[];
@@ -22,6 +31,8 @@ export type Checkout = {
   expires_at: string;
 };
 export type Order = {
+  event_id: string;
+  event?: Event;
   id: string;
   number: string;
   email: string;
@@ -39,14 +50,15 @@ export const money = (value: number) =>
   }).format(value);
 export const ageLabel = (age: number) =>
   `${age} ${age % 100 >= 11 && age % 100 <= 14 ? "лет" : age % 10 === 1 ? "год" : age % 10 >= 2 && age % 10 <= 4 ? "года" : "лет"}`;
-export const eventDate = (value: string) =>
+export const eventDate = (value: string, timezone = "Europe/Moscow") =>
   new Intl.DateTimeFormat("ru-RU", {
     day: "numeric",
     year: "numeric",
     month: "long",
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "Europe/Moscow",
+    timeZone: timezone,
+    timeZoneName: "short",
   }).format(new Date(value));
 export function parseAge(value: string): number | null {
   if (!/^\d{1,3}$/.test(value)) return null;

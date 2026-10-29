@@ -14,9 +14,9 @@ const newPerson = (): PersonDraft => ({
   age: "",
 });
 
-export default function App() {
-  const [restored] = useState(readSession);
-  const [event, setEvent] = useState<Event | null>(null);
+export default function App({ eventID }: { eventID: string }) {
+  const [restored] = useState(() => readSession(eventID));
+  const [liveEvent, setEvent] = useState<Event | null>(null);
   const [loadError, setLoadError] = useState("");
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [people, setPeople] = useState<PersonDraft[]>(
@@ -26,6 +26,7 @@ export default function App() {
   const [step, setStep] = useState<Step>(restored?.step ?? "participants");
   const [quote, setQuote] = useState<Checkout | null>(restored?.quote ?? null);
   const [order, setOrder] = useState<Order | null>(restored?.order ?? null);
+  const event = (step === "review" ? quote?.event : step === "success" ? order?.event : null) ?? liveEvent;
   const [simulate, setSimulate] = useState(restored?.simulate ?? false);
   const [operation, setOperation] = useState<"checking" | "confirming" | null>(null);
   const busy = operation !== null;
@@ -66,7 +67,7 @@ export default function App() {
 
   useEffect(() => {
     setSaved(
-      saveSession({ people, email, step, quote, order, simulate, uncertain }),
+      saveSession({ people, email, step, quote, order, simulate, uncertain }, eventID),
     );
   }, [people, email, step, quote, order, simulate, uncertain]);
   useEffect(() => {
@@ -87,7 +88,7 @@ export default function App() {
   useEffect(() => {
     let active = true;
     setLoadError("");
-    request<Event>("/api/event")
+    request<Event>(`/api/events/${eventID}`)
       .then((value) => {
         if (active) {
           setEvent(value);
@@ -187,6 +188,7 @@ export default function App() {
     setOperation("checking");
     try {
       const result = await request<Checkout>("/api/checkouts", {
+        event_id: eventID,
         email: email.trim(),
         participants: people.map((p) => ({
           name: p.name.trim(),
@@ -227,7 +229,7 @@ export default function App() {
       order,
       simulate,
       uncertain: true,
-    });
+    }, eventID);
     setUncertain(true);
     setOperation("confirming");
     setNotice("");
@@ -245,7 +247,7 @@ export default function App() {
         setUncertain(false);
       } else if (
         error instanceof ApiError &&
-        ["expired", "not_found"].includes(error.code)
+        ["expired", "not_found", "cancelled"].includes(error.code)
       ) {
         setNotice(error.message);
         setExpired(true);
@@ -284,6 +286,7 @@ export default function App() {
                 : "Готовим ваше приглашение…"}
             </h1>
             <p>{loadError || "Проверяем доступность билетов."}</p>
+            <a className="catalog-back" href="/">← Все мероприятия</a>
             {loadError && (
               <button
                 className="primary-button"
@@ -301,8 +304,9 @@ export default function App() {
               </p>
               <h1>Оформление билетов</h1>
               <p>
-                «{event.title}» · {eventDate(event.date)} · МСК
+                «{event.title}» · {eventDate(event.date, event.timezone)}
                 <span className="heading-venue">{event.venue}</span>
+                <span className="event-description">{event.description}</span>
               </p>
             </div>
             <ol className="steps" aria-label="Этапы оформления">
@@ -700,7 +704,7 @@ export default function App() {
                       на «{event.title}».
                     </p>
                     <div className="result-event">
-                      {eventDate(event.date)} · МСК<span>{event.venue}</span>
+                      {eventDate(event.date, event.timezone)}<span>{event.venue}</span>
                     </div>
                     <TicketList people={order.participants} />
                     <div className="review-email">
@@ -742,7 +746,7 @@ export default function App() {
                     <button className="secondary-button" onClick={edit}>
                       ← Вернуться к участникам
                     </button>
-                    {simulate && event.demo_enabled && (
+                    {simulate && liveEvent?.demo_enabled && (
                       <button
                         className="primary-button"
                         onClick={() => {
@@ -764,7 +768,7 @@ export default function App() {
                 />
               )}
             </div>
-            {event.demo_enabled && (
+            {liveEvent?.demo_enabled && (
               <details className="demo-controls">
                 <summary>Демонстрация сценариев</summary>
                 <p>

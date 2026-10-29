@@ -30,7 +30,7 @@ func setup(t *testing.T) (*sql.DB, *usecase.Booking, *sqlite.BookingRepository) 
 func draft(t *testing.T, b *usecase.Booking, simulate bool) domain.Checkout {
 	t.Helper()
 	age := 18
-	q, err := b.Checkout(context.Background(), domain.OrderInput{Email: "guest@example.ru", Participants: []domain.ParticipantInput{{Name: "Гость", Age: &age}}, SimulateSoldOut: simulate})
+	q, err := b.Checkout(context.Background(), domain.OrderInput{EventID: sqlite.FirstEventID, Email: "guest@example.ru", Participants: []domain.ParticipantInput{{Name: "Гость", Age: &age}}, SimulateSoldOut: simulate})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func TestConfirmationIsIdempotentAndDoesNotReserveAtReview(t *testing.T) {
 	db, b, _ := setup(t)
 	ctx := context.Background()
 	q := draft(t, b, false)
-	event, _ := b.Event(ctx)
+	event, _ := b.Event(ctx, sqlite.FirstEventID)
 	if event.Remaining != 100 {
 		t.Fatal("review reserved seats")
 	}
@@ -52,7 +52,7 @@ func TestConfirmationIsIdempotentAndDoesNotReserveAtReview(t *testing.T) {
 	if err != nil || repeated.ID != order.ID {
 		t.Fatalf("duplicate confirmation: %v", err)
 	}
-	event, _ = b.Event(ctx)
+	event, _ = b.Event(ctx, sqlite.FirstEventID)
 	if event.Remaining != 99 {
 		t.Fatalf("remaining %d", event.Remaining)
 	}
@@ -62,7 +62,7 @@ func TestConfirmationIsIdempotentAndDoesNotReserveAtReview(t *testing.T) {
 	if err := sqlite.Migrate(ctx, db); err != nil {
 		t.Fatal(err)
 	}
-	event, _ = b.Event(ctx)
+	event, _ = b.Event(ctx, sqlite.FirstEventID)
 	if event.Remaining != 99 {
 		t.Fatal("migration reset inventory")
 	}
@@ -99,7 +99,7 @@ func TestConcurrentOrdersCannotOversell(t *testing.T) {
 	if success != 1 || sold != 1 {
 		t.Fatalf("success=%d sold=%d", success, sold)
 	}
-	event, _ := b.Event(ctx)
+	event, _ := b.Event(ctx, sqlite.FirstEventID)
 	if event.Remaining != 0 {
 		t.Fatal("bad capacity")
 	}
@@ -111,7 +111,7 @@ func TestDemoSoldOutAndExpiredDraftDoNotCreateOrders(t *testing.T) {
 	if _, err := b.Confirm(ctx, q.ID); !errors.Is(err, domain.ErrSoldOut) {
 		t.Fatal(err)
 	}
-	event, _ := b.Event(ctx)
+	event, _ := b.Event(ctx, sqlite.FirstEventID)
 	if event.Remaining != 100 {
 		t.Fatal("demo affected live inventory")
 	}
@@ -125,7 +125,7 @@ func TestDemoSoldOutAndExpiredDraftDoNotCreateOrders(t *testing.T) {
 	}
 	disabled := usecase.NewBooking(repo, false)
 	age := 18
-	_, err := disabled.Checkout(ctx, domain.OrderInput{Email: "a@b.ru", Participants: []domain.ParticipantInput{{Name: "Анна", Age: &age}}, SimulateSoldOut: true})
+	_, err := disabled.Checkout(ctx, domain.OrderInput{EventID: sqlite.FirstEventID, Email: "a@b.ru", Participants: []domain.ParticipantInput{{Name: "Анна", Age: &age}}, SimulateSoldOut: true})
 	var validation *domain.ValidationError
 	if !errors.As(err, &validation) {
 		t.Fatal("demo accepted when disabled")
@@ -149,7 +149,7 @@ func TestConcurrentRetriesUseOneOrder(t *testing.T) {
 		t.Fatal("duplicate order")
 	}
 	var remaining int
-	if err := db.QueryRow("SELECT remaining FROM events").Scan(&remaining); err != nil || remaining != 99 {
+	if err := db.QueryRow("SELECT remaining FROM events WHERE id='" + sqlite.FirstEventID + "'").Scan(&remaining); err != nil || remaining != 99 {
 		t.Fatalf("remaining=%d err=%v", remaining, err)
 	}
 }

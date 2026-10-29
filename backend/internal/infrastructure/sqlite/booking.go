@@ -24,23 +24,44 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 	if _, err := tx.ExecContext(ctx, schema); err != nil {
 		return err
 	}
+	if err := migrateEvents(ctx, tx); err != nil {
+		return err
+	}
+	if err := migrateOrderStatuses(ctx, tx); err != nil {
+		return err
+	}
+	if err := migrateMailings(ctx, tx); err != nil {
+		return err
+	}
+	if err := migrateDispatch(ctx, tx); err != nil {
+		return err
+	}
+	if err := migrateAssistant(ctx, tx); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 
 type BookingRepository struct{ db *sql.DB }
 
 func NewBookingRepository(db *sql.DB) *BookingRepository { return &BookingRepository{db: db} }
-func (r *BookingRepository) Event(ctx context.Context) (domain.Event, error) {
-	event := domain.Event{FullPrice: domain.FullPrice, ChildPrice: domain.ChildPrice}
-	err := r.db.QueryRowContext(ctx, "SELECT id, title, starts_at, venue, remaining FROM events WHERE id = 'orbit'").Scan(&event.ID, &event.Title, &event.Date, &event.Venue, &event.Remaining)
-	return event, err
-}
 func (r *BookingRepository) CreateCheckout(ctx context.Context, c domain.Checkout, simulate bool) error {
 	people, err := json.Marshal(c.Participants)
 	if err != nil {
 		return err
 	}
-	_, err = r.db.ExecContext(ctx, "INSERT INTO checkouts (id, event_id, email, participants, total, expires_at, simulate_sold_out) VALUES (?, 'orbit', ?, ?, ?, ?, ?)", c.ID, c.Email, string(people), c.Total, c.ExpiresAt, simulate)
+	snapshot, err := json.Marshal(c.Event)
+	if err != nil {
+		return err
+	}
+	result, err := r.db.ExecContext(ctx, `INSERT INTO checkouts (id,event_id,email,participants,total,expires_at,simulate_sold_out,event_snapshot) SELECT ?,id,?,?,?,?,?,? FROM events WHERE id=? AND deleted_at IS NULL`, c.ID, c.Email, string(people), c.Total, c.ExpiresAt, simulate, string(snapshot), c.EventID)
+	if err == nil {
+		n, _ := result.RowsAffected()
+		if n == 0 {
+			return domain.ErrNotFound
+		}
+	}
+
 	return err
 }
 
@@ -52,22 +73,28 @@ func (r *BookingRepository) Confirm(ctx context.Context, id string, now time.Tim
 		return domain.Order{}, err
 	}
 	defer tx.Rollback()
-	var email, people, expires string
+	var email, people, expires, eventID, snapshot string
 	var total int
 	var simulate bool
-	err = tx.QueryRowContext(ctx, "SELECT email, participants, total, expires_at, simulate_sold_out FROM checkouts WHERE id = ?", id).Scan(&email, &people, &total, &expires, &simulate)
+	err = tx.QueryRowContext(ctx, "SELECT email, participants, total, expires_at, simulate_sold_out, event_id, event_snapshot FROM checkouts WHERE id = ?", id).Scan(&email, &people, &total, &expires, &simulate, &eventID, &snapshot)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.Order{}, domain.ErrNotFound
 	}
 	if err != nil {
 		return domain.Order{}, err
 	}
-	order := domain.Order{Email: email, Total: total}
+	order := domain.Order{EventID: eventID, Email: email, Total: total, Status: domain.OrderActive}
+	if err := json.Unmarshal([]byte(snapshot), &order.Event); err != nil {
+		return domain.Order{}, err
+	}
 	if err := json.Unmarshal([]byte(people), &order.Participants); err != nil {
 		return domain.Order{}, err
 	}
-	err = tx.QueryRowContext(ctx, "SELECT id, number, created_at FROM orders WHERE checkout_id = ?", id).Scan(&order.ID, &order.Number, &order.CreatedAt)
+	err = tx.QueryRowContext(ctx, "SELECT id, number, created_at, status FROM orders WHERE checkout_id = ?", id).Scan(&order.ID, &order.Number, &order.CreatedAt, &order.Status)
 	if err == nil {
+		if order.Status == domain.OrderCancelled {
+			return domain.Order{}, domain.ErrCancelled
+		}
 		return order, nil
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
@@ -84,7 +111,7 @@ func (r *BookingRepository) Confirm(ctx context.Context, id string, now time.Tim
 	if simulate {
 		return domain.Order{}, domain.ErrSoldOut
 	}
-	result, err := tx.ExecContext(ctx, "UPDATE events SET remaining = remaining - ? WHERE id = 'orbit' AND remaining >= ?", len(order.Participants), len(order.Participants))
+	result, err := tx.ExecContext(ctx, "UPDATE events SET remaining = remaining - ? WHERE id = ? AND deleted_at IS NULL AND remaining >= ?", len(order.Participants), eventID, len(order.Participants))
 	if err != nil {
 		return domain.Order{}, err
 	}

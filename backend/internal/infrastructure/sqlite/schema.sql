@@ -5,8 +5,6 @@ CREATE TABLE IF NOT EXISTS events (
  venue TEXT NOT NULL,
  remaining INTEGER NOT NULL CHECK (remaining >= 0)
 );
-INSERT OR IGNORE INTO events (id, title, starts_at, venue, remaining)
-VALUES ('orbit', 'За пределами привычного', '2026-11-21T18:00:00+03:00', 'Москва · Пространство «Орбита»', 100);
 CREATE TABLE IF NOT EXISTS checkouts (
  id TEXT PRIMARY KEY,
  event_id TEXT NOT NULL REFERENCES events(id),

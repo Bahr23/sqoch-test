@@ -9,9 +9,14 @@ import (
 	"os"
 	"os/signal"
 	delivery "sqoch-ticket/backend/internal/delivery/http"
+	adminauth "sqoch-ticket/backend/internal/infrastructure/auth"
 	"sqoch-ticket/backend/internal/infrastructure/config"
+	"sqoch-ticket/backend/internal/infrastructure/openrouter"
+	"sqoch-ticket/backend/internal/infrastructure/outbox"
+	"sqoch-ticket/backend/internal/infrastructure/rabbit"
 	"sqoch-ticket/backend/internal/infrastructure/sqlite"
 	"sqoch-ticket/backend/internal/usecase"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -30,6 +35,13 @@ func run() error {
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
 	slog.SetDefault(logger)
+	seedOrders := len(os.Args) == 2 && os.Args[1] == "seed-orders"
+	if seedOrders && !cfg.DemoMode {
+		return fmt.Errorf("seed-orders requires DEMO_MODE=true")
+	}
+	if len(os.Args) > 1 && !seedOrders && (len(os.Args) != 2 || os.Args[1] != "healthcheck") {
+		return fmt.Errorf("usage: api [healthcheck|seed-orders]")
+	}
 	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
 		client := http.Client{Timeout: 3 * time.Second}
 		response, err := client.Get("http://127.0.0.1:" + cfg.Port + "/api/health")
@@ -55,10 +67,57 @@ func run() error {
 		cancel()
 		return err
 	}
+	if seedOrders {
+		defer cancel()
+		report, err := sqlite.SeedDemoOrders(initCtx, db, time.Now())
+		if err != nil {
+			return err
+		}
+		logger.Info("demo orders ready", "report", report)
+		return nil
+	}
+	sessions, err := sqlite.NewAdminSessions(initCtx, db)
+	if err != nil {
+		cancel()
+		return err
+	}
 	cancel()
+	passwords, err := adminauth.NewPassword(cfg.AdminPassword)
+	if err != nil {
+		return err
+	}
+	auth := usecase.NewAuth(cfg.AdminEmail, passwords, adminauth.NewTokens(cfg.JWTSecret), sessions, cfg.JWTTTL)
+	messaging, err := config.LoadMessaging()
+	if err != nil {
+		return err
+	}
+	mailingsRepo := sqlite.NewMailingRepository(db, messaging.Rabbit.Commands)
+	var workers sync.WaitGroup
+	workers.Add(2)
+	go func() { defer workers.Done(); rabbit.RunPublisher(ctx, messaging.Rabbit, outbox.Store{DB: db}, logger) }()
+	go func() {
+		defer workers.Done()
+		rabbit.RunConsumer(ctx, messaging.Rabbit, messaging.Rabbit.Results, mailingsRepo.ApplyResult, logger)
+	}()
+	defer func() { stop(); workers.Wait() }()
+	assistantConfig, err := config.LoadAssistant()
+	if err != nil {
+		return err
+	}
+	agent := &usecase.Assistant{Repo: sqlite.NewAssistantRepository(db), Events: usecase.NewEvents(sqlite.NewBookingRepository(db)), Mailings: usecase.NewMailings(mailingsRepo), Enabled: assistantConfig.Key != "" && assistantConfig.Model != "", ModelName: assistantConfig.Model, Timeout: assistantConfig.Timeout, MaxSteps: assistantConfig.MaxSteps, Logger: logger, Model: &openrouter.Client{Key: assistantConfig.Key, Model: assistantConfig.Model, Endpoint: "https://openrouter.ai/api/v1/chat/completions", MaxTokens: assistantConfig.MaxTokens, HTTP: &http.Client{Timeout: assistantConfig.Timeout}}}
+	workers.Add(1)
+	go func() { defer workers.Done(); agent.Run(ctx) }()
+	router := http.NewServeMux()
+	organizerRoutes := delivery.NewOrganizerRoutes(usecase.NewEvents(sqlite.NewBookingRepository(db)), usecase.NewMailings(mailingsRepo), logger)
+	adminRoutes := http.NewServeMux()
+	adminRoutes.Handle("/api/admin/assistant/", delivery.NewAssistantHandler(agent, logger))
+	adminRoutes.Handle("/api/admin/", organizerRoutes)
+	router.Handle("/api/admin/", delivery.NewAdminHandler(auth, cfg.AdminOrigin, logger, adminRoutes))
+	router.Handle("/internal/", delivery.NewEligibilityHandler(mailingsRepo, messaging.Token, logger))
+	router.Handle("/", delivery.NewBookingHandler(usecase.NewHealth(db), usecase.NewBooking(sqlite.NewBookingRepository(db), cfg.DemoMode), logger))
 	server := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           delivery.NewBookingHandler(usecase.NewHealth(db), usecase.NewBooking(sqlite.NewBookingRepository(db), cfg.DemoMode), logger),
+		Handler:           router,
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second,
 		WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second,
 	}

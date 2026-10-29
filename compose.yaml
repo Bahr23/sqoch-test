@@ -2,10 +2,26 @@ services:
   backend:
     build: ./backend
     environment:
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-}
+      AGENT_TIMEOUT: ${AGENT_TIMEOUT:-120s}
+      AGENT_MAX_STEPS: ${AGENT_MAX_STEPS:-8}
+      AGENT_MAX_TOKENS: ${AGENT_MAX_TOKENS:-4096}
       API_PORT: ${API_PORT:?Set API_PORT in .env}
       SQLITE_PATH: ${SQLITE_PATH:?Set SQLITE_PATH in .env}
       LOG_LEVEL: ${LOG_LEVEL:?Set LOG_LEVEL in .env}
       DEMO_MODE: ${DEMO_MODE:?Set DEMO_MODE in .env}
+      ADMIN_HOST: ${ADMIN_HOST:?Set ADMIN_HOST in .env}
+      ADMIN_ORIGIN: ${ADMIN_ORIGIN:?Set ADMIN_ORIGIN in .env}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Set ADMIN_EMAIL in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      JWT_TTL: ${JWT_TTL:?Set JWT_TTL in .env}
+      RABBITMQ_URL: ${RABBITMQ_URL:?Set RABBITMQ_URL in .env}
+      RABBITMQ_COMMAND_QUEUE: ${RABBITMQ_COMMAND_QUEUE:?Set RABBITMQ_COMMAND_QUEUE in .env}
+      RABBITMQ_RESULT_QUEUE: ${RABBITMQ_RESULT_QUEUE:?Set RABBITMQ_RESULT_QUEUE in .env}
+      NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:?Set NOTIFICATION_SERVICE_TOKEN in .env}
+      OUTBOX_INTERVAL: ${OUTBOX_INTERVAL:?Set OUTBOX_INTERVAL in .env}
     volumes:
       - sqlite_data:/data
     healthcheck:
@@ -15,10 +31,62 @@ services:
       start_period: 10s
       retries: 3
     restart: unless-stopped
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 6
+    restart: unless-stopped
+  notifier:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.notifier
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:?Set LOG_LEVEL in .env}
+      RABBITMQ_URL: ${RABBITMQ_URL:?Set RABBITMQ_URL in .env}
+      RABBITMQ_COMMAND_QUEUE: ${RABBITMQ_COMMAND_QUEUE:?Set RABBITMQ_COMMAND_QUEUE in .env}
+      RABBITMQ_RESULT_QUEUE: ${RABBITMQ_RESULT_QUEUE:?Set RABBITMQ_RESULT_QUEUE in .env}
+      NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:?Set NOTIFICATION_SERVICE_TOKEN in .env}
+      OUTBOX_INTERVAL: ${OUTBOX_INTERVAL:?Set OUTBOX_INTERVAL in .env}
+      NOTIFIER_PORT: ${NOTIFIER_PORT:?Set NOTIFIER_PORT in .env}
+      NOTIFIER_SQLITE_PATH: ${NOTIFIER_SQLITE_PATH:?Set NOTIFIER_SQLITE_PATH in .env}
+      MOCK_SQLITE_PATH: ${MOCK_SQLITE_PATH:?Set MOCK_SQLITE_PATH in .env}
+      BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:?Set BACKEND_INTERNAL_URL in .env}
+      NOTIFIER_INTERVAL: ${NOTIFIER_INTERVAL:?Set NOTIFIER_INTERVAL in .env}
+      NOTIFIER_LEASE: ${NOTIFIER_LEASE:?Set NOTIFIER_LEASE in .env}
+      NOTIFIER_TIMEOUT: ${NOTIFIER_TIMEOUT:?Set NOTIFIER_TIMEOUT in .env}
+      NOTIFIER_RETRY_BASE: ${NOTIFIER_RETRY_BASE:?Set NOTIFIER_RETRY_BASE in .env}
+      NOTIFIER_MAX_ATTEMPTS: ${NOTIFIER_MAX_ATTEMPTS:?Set NOTIFIER_MAX_ATTEMPTS in .env}
+      MOCK_SEND_DELAY: ${MOCK_SEND_DELAY:?Set MOCK_SEND_DELAY in .env}
+      MOCK_FAILURE_MODE: ${MOCK_FAILURE_MODE:?Set MOCK_FAILURE_MODE in .env}
+    volumes:
+      - notifier_data:/data
+    depends_on:
+      backend:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app/notifier", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
   frontend:
     build: ./frontend
     environment:
       API_PORT: ${API_PORT:?Set API_PORT in .env}
+      ADMIN_HOST: ${ADMIN_HOST:?Set ADMIN_HOST in .env}
     ports:
       - "${APP_PORT:?Set APP_PORT in .env}:80"
     depends_on:
@@ -27,3 +95,5 @@ services:
     restart: unless-stopped
 volumes:
   sqlite_data:
+  notifier_data:
+  rabbitmq_data:

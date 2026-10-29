@@ -21,7 +21,7 @@ function snapshot(v: unknown): boolean {
     !record(v) ||
     !text(v.id, 64) ||
     !text(v.email, 254) ||
-    !integer(v.total, 1000, 8000) ||
+    !integer(v.total, 1, 4000000) ||
     !Array.isArray(v.participants) ||
     v.participants.length < 1 ||
     v.participants.length > 4
@@ -33,7 +33,7 @@ function snapshot(v: unknown): boolean {
       text(p.name, 160) &&
       integer(p.age, 0, 120) &&
       ["full", "child"].includes(String(p.ticket_type)) &&
-      integer(p.price, 1000, 2000),
+      integer(p.price, 1, 1000000),
   );
 }
 export function decodeSession(raw: string | null): BookingSession | null {
@@ -95,16 +95,16 @@ export function decodeSession(raw: string | null): BookingSession | null {
     return null;
   }
 }
-export function readSession(): BookingSession | null {
+export function readSession(eventID = "legacy"): BookingSession | null {
   try {
-    return decodeSession(sessionStorage.getItem(KEY));
+    return decodeSession(sessionStorage.getItem(`${KEY}:${eventID}`));
   } catch {
     return null;
   }
 }
-export function saveSession(value: BookingSession): boolean {
+export function saveSession(value: BookingSession, eventID = "legacy"): boolean {
   try {
-    sessionStorage.setItem(KEY, JSON.stringify({ version: 1, ...value }));
+    sessionStorage.setItem(`${KEY}:${eventID}`, JSON.stringify({ version: 1, ...value }));
     return true;
   } catch {
     return false;

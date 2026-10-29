@@ -1,0 +1,171 @@
+.admin-main { flex: 1; display: grid; place-items: center; padding: 56px 0; min-width: 0; }
+.admin-card { width: 100%; max-width: 460px; padding: 36px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-card); box-shadow: var(--panel-shadow); }
+.admin-card h1 { font-size: clamp(26px, 4vw, 32px); line-height: 1.2; letter-spacing: -.035em; margin: 16px 0 12px; }
+.admin-card h1:focus { outline: none; }
+.admin-description { color: var(--ink-muted); font-size: 14px; line-height: 1.7; margin: 0 0 28px; }
+.admin-card .field { margin-bottom: 20px; }
+.admin-password { position: relative; }
+.admin-password input { padding-right: 92px; }
+.admin-show { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); min-height: 44px; border: 0; background: transparent; padding: 8px 10px; border-radius: 8px; color: var(--violet-soft); font-size: 12px; }
+.admin-help { font-size: 12px; line-height: 1.7; color: var(--ink-muted); text-align: center; margin: 22px 0 0; }
+.admin-message { background: var(--accent-fill); border: 1px solid var(--accent-line); padding: 12px; border-radius: 10px; color: var(--ink); font-size: 13px; line-height: 1.6; }
+.admin-dashboard { max-width: 680px; }
+.admin-email { display: block; overflow-wrap: anywhere; color: var(--ink); font-weight: 500; }
+.admin-empty { padding: 32px 20px; background: var(--control-bg); border: 1px dashed var(--line-strong); border-radius: 16px; text-align: center; }
+.admin-lock { display: grid; place-items: center; width: 44px; height: 44px; margin: 0 auto 16px; background: var(--success-fill); color: var(--green); border: 1px solid var(--success-line); border-radius: 14px; }
+.admin-empty h2 { font-size: 20px; margin: 0 0 10px; }
+.admin-empty p { color: var(--ink-muted); font-size: 14px; line-height: 1.7; margin: 0; }
+.admin-session { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 24px; flex-wrap: wrap; }
+.admin-session p { color: var(--ink-muted); font-size: 12px; line-height: 1.6; margin: 0; }
+.admin-session p span { display: block; }
+.admin-session button { min-width: 100px; }
+@media (max-width:480px) {
+ .admin-main { padding: 32px 0; }
+ .admin-card { padding: 24px 20px; border-radius: 20px; }
+ .admin-card .eyebrow { font-size: 9px; letter-spacing: .08em; }
+ .admin-card .field input { font-size: 16px; }
+ .admin-password input { padding-right: 88px; }
+ .admin-empty { padding: 24px 16px; }
+}
+.admin-shell .site-header-with-nav { display:grid; grid-template-columns:auto minmax(0,1fr) auto; column-gap:24px; }
+.admin-nav { display:flex; gap:8px; min-width:0; }
+.admin-nav a { display:flex; align-items:center; justify-content:center; padding:10px 18px; min-height:44px; border:1px solid transparent; border-radius:var(--radius-pill); color:var(--ink-muted); font-size:14px; font-weight:500; transition:background .18s ease,color .18s ease; }
+.admin-nav a:hover { background:var(--control-hover); color:var(--ink); }
+.admin-nav a[aria-current=page] { color:var(--violet-soft); background:var(--accent-fill); border-color:var(--accent-line); }
+@media(max-width:800px) {
+ .admin-shell .site-header-with-nav .tag { display:none; }
+}
+@media(max-width:640px) {
+ .admin-shell .site-header-with-nav { grid-template-columns:minmax(0,1fr) auto; gap:8px 12px; }
+ .site-header-with-nav .brand { grid-column:1; grid-row:1; }
+ .site-header-with-nav .header-actions { grid-column:2; grid-row:1; }
+ .admin-nav { grid-column:1/-1; grid-row:2; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border-top:1px solid var(--line); padding-top:8px; }
+}
+.admin-main.has-workspace { display:block; padding-top:24px; }
+.admin-workspace { min-width:0; }
+.admin-account { display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:28px; font-size:13px; color:var(--ink-muted); }
+.admin-account span { overflow-wrap:anywhere; }
+.events-heading { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px; margin-bottom:28px; }
+.events-heading h1 { margin:12px 0 0; font-size:clamp(26px,4vw,36px); letter-spacing:-.035em; }
+.events-heading h1:focus { outline:none; }
+.events-heading>.primary-button { width:auto; }
+.admin-event-list { display:grid; gap:16px; }
+.admin-event-row { display:flex; justify-content:space-between; gap:24px; padding:28px; border:1px solid var(--line); border-radius:20px; background:var(--card); }
+.admin-event-info { min-width:0; }
+.admin-event-info h2 { font-size:23px; margin:10px 0 14px; overflow-wrap:anywhere; }
+.admin-event-info>p:not(.eyebrow) { color:var(--ink-muted); font-size:13px; margin:7px 0; overflow-wrap:anywhere; }
+.event-metrics { display:flex; gap:12px 24px; flex-wrap:wrap; margin-top:20px; font-size:12px; color:var(--ink-muted); }
+.event-metrics strong { color:var(--ink); font-weight:500; }
+.event-row-actions { display:flex; flex-direction:column; align-items:stretch; flex-shrink:0; text-align:center; gap:6px; }
+.event-row-actions .text-button { display:grid; place-items:center; text-decoration:none; }
+.danger-button { color:var(--red); }
+.event-editor { background:var(--card); border:1px solid var(--line); border-radius:24px; padding:32px; }
+.editor-section+.editor-section { border-top:1px solid var(--line); padding-top:24px; margin-top:28px; }
+.editor-section h2 { font-size:20px; margin:0 0 24px; }
+.editor-section .field { margin-bottom:20px; }
+.editor-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; }
+.field textarea { width:100%; min-width:0; resize:vertical; background:var(--control-bg); color:var(--ink); border:1px solid var(--line-strong); border-radius:10px; padding:12px 14px; font:inherit; font-size:16px; line-height:1.6; }
+.field textarea:focus { outline:2px solid var(--focus); outline-offset:2px; }
+.field textarea[aria-invalid=true] { border-color:var(--red); }
+.editor-actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-top:24px; }
+.editor-actions .primary-button { width:auto; min-width:190px; }
+.delete-confirm { padding:24px; border:1px solid var(--error-line); border-radius:16px; background:var(--error-fill); margin-bottom:24px; }
+.delete-confirm h2 { font-size:20px; overflow-wrap:anywhere; }
+.delete-confirm p { font-size:14px; line-height:1.6; color:var(--ink-muted); }
+.admin-placeholder { max-width:none; }
+@media(max-width:640px){
+ .admin-event-row { flex-direction:column; padding:20px; }
+ .event-row-actions { flex-direction:row; flex-wrap:wrap; gap:10px; align-items:center; }
+ .event-editor { padding:24px 16px; }
+ .editor-grid { grid-template-columns:minmax(0,1fr); gap:0; }
+ .editor-actions>* { width:100% !important; text-align:center; }
+}
+/* Fill the workspace even when the login layout uses centered grid alignment. */
+.admin-main.has-workspace { place-items: normal; }
+.admin-workspace { width: 100%; }
+
+.mailings-intro { margin:-8px 0 28px; color:var(--ink-muted); font-size:14px; line-height:1.7; }
+.mailing-layout { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr); align-items:start; gap:24px; }
+.mailing-editor, .mailing-audience { min-width:0; }
+.mailing-section-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:24px; }
+.mailing-section-heading h2 { margin:0; font-size:22px; letter-spacing:-.025em; }
+.draft-badge, .recipient-count { display:inline-flex; align-items:center; justify-content:center; padding:6px 12px; border-radius:var(--radius-pill); background:var(--accent-fill); border:1px solid var(--accent-line); color:var(--violet-soft); font-size:12px; line-height:1.4; }
+.recipient-count { min-width:34px; font-variant-numeric:tabular-nums; }
+.mailing-editor .field { margin-bottom:24px; }
+.field select { display:block; width:100%; min-width:0; min-height:48px; padding:12px; border:1px solid var(--line-strong); border-radius:10px; background:var(--control-bg); color:var(--ink); font:inherit; font-size:16px; text-overflow:ellipsis; }
+.field select option { background:var(--card); color:var(--ink); }
+.field select:focus { outline:2px solid var(--focus); outline-offset:2px; }
+.field select[aria-invalid=true] { border-color:var(--red); }
+.select-control { position:relative; }
+.select-control select { appearance:none; padding-right:44px; }
+.select-control > svg { position:absolute; top:50%; right:14px; transform:translateY(-50%); pointer-events:none; color:var(--ink); }
+.mailing-text-hint { display:flex; justify-content:space-between; flex-wrap:wrap; align-items:baseline; gap:4px 16px; color:var(--ink-muted); font-size:12px; }
+.mailing-text-hint .field-hint { margin-bottom:0; }
+.mailing-save-state { margin:0; color:var(--ink-muted); font-size:12px; line-height:1.6; }
+.mailing-editor .editor-actions { margin-top:16px; }
+.mailing-editor .editor-actions>* { flex:1; }
+.mailing-editor .editor-actions .primary-button { min-width:0; }
+.mailing-editor .primary-button:disabled { cursor:default; }
+.mailing-audience { border:1px solid var(--line); border-radius:24px; padding:28px; background:var(--card); }
+.mailing-audience-help { margin:-8px 0 24px; font-size:13px; line-height:1.7; color:var(--ink-muted); }
+.mailing-empty { padding:28px 16px; text-align:center; background:var(--control-bg); border:1px dashed var(--line-strong); border-radius:16px; font-size:14px; line-height:1.7; }
+.mailing-empty p { margin:0 0 8px; font-weight:600; }
+.mailing-empty span { color:var(--ink-muted); font-size:13px; }
+.mailing-recipient-list { list-style:none; padding:0; margin:0 0 20px; }
+.mailing-recipient-list li { padding:16px 0; border-bottom:1px solid var(--line); }
+.mailing-recipient-list li:first-child { padding-top:0; }
+.recipient-names, .recipient-email { margin:0; overflow-wrap:anywhere; line-height:1.7; font-size:13px; }
+.recipient-names { font-weight:500; }
+.recipient-email { color:var(--ink-muted); margin-top:4px; }
+.admin-event-info .mailing-preview { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; white-space:pre-wrap; line-height:1.7; }
+@media(max-width:900px) { .mailing-layout { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:640px) {
+ .mailing-audience { padding:24px 16px; }
+ .mailings-workspace .events-heading>* { width:100%; }
+ .mailings-workspace .events-heading>a { text-align:center; }
+ .mailing-editor .editor-actions { flex-direction:column; align-items:stretch; }
+}
+.mailing-confirm-dialog { width:min(600px,calc(100% - 32px)); max-height:calc(100svh - 32px); overflow:auto; padding:28px; margin:auto; color:var(--ink); background:var(--card); border:1px solid var(--line-strong); border-radius:24px; box-shadow:var(--panel-shadow); }
+.mailing-confirm-dialog::backdrop { background:#0d091599; backdrop-filter:blur(3px); }
+.mailing-confirm-dialog h2 { margin-top:0; font-size:24px; letter-spacing:-.025em; }
+.mailing-confirm-dialog p { line-height:1.7; font-size:14px; overflow-wrap:anywhere; }
+.mailing-confirm-text { white-space:pre-wrap; overflow-wrap:anywhere; max-height:30svh; overflow:auto; padding:18px; border:1px solid var(--line); border-radius:12px; background:var(--control-bg); font-size:14px; line-height:1.7; }
+.mailing-progress-panel { background:var(--card); border:1px solid var(--line); border-radius:24px; padding:28px; }
+.mailing-progress-panel h2 { overflow-wrap:anywhere; }
+.mailing-progress { width:100%; height:12px; accent-color:var(--violet); }
+.progress-label { font-size:14px; margin:24px 0 12px; }
+.mailing-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:20px 0; }
+.mailing-metrics div { padding:16px; background:var(--control-bg); border-radius:12px; }
+.mailing-metrics dt { color:var(--ink-muted); font-size:12px; }
+.mailing-metrics dd { font-size:28px; margin:8px 0 0; font-variant-numeric:tabular-nums; }
+.mailing-resume { display:flex; align-items:center; gap:24px; justify-content:space-between; border-top:1px solid var(--line); padding-top:16px; }
+.mailing-resume p { font-size:13px; color:var(--ink-muted); line-height:1.7; }
+.mailing-resume button { width:auto; flex-shrink:0; }
+.mailing-frozen { border-top:1px solid var(--line); margin-top:20px; padding-top:12px; }
+.mailing-frozen summary { cursor:pointer; min-height:44px; padding:12px 0; font-size:14px; }
+.mailing-frozen p { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.7; font-size:14px; }
+.mailing-results { margin-top:32px; }
+.mailing-results h2 { font-size:22px; }
+.mailing-deliveries { padding:0; list-style:none; display:grid; gap:12px; }
+.mailing-deliveries li { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px 24px; padding:20px 24px; background:var(--card); border:1px solid var(--line); border-radius:16px; }
+.delivery-person { min-width:0; display:grid; gap:5px; font-size:14px; line-height:1.6; overflow-wrap:anywhere; }
+.delivery-person strong { font-weight:500; }
+.delivery-person>span { color:var(--ink-muted); font-size:13px; }
+.delivery-result { display:flex; align-items:flex-end; flex-direction:column; gap:4px; }
+.delivery-error { grid-column:1/-1; margin:0; font-size:12px; line-height:1.6; color:var(--ink-muted); }
+.delivery-sent,.status-completed { color:var(--green); background:var(--success-fill); border-color:var(--success-line); }
+.delivery-failed,.status-completed_with_errors { color:var(--red); background:var(--error-fill); border-color:var(--error-line); }
+@media(max-width:640px) {
+ .mailing-confirm-dialog { padding:24px 16px; }
+ .mailing-progress-panel { padding:24px 16px; }
+ .mailing-progress-panel .mailing-section-heading { flex-wrap:wrap; }
+ .mailing-metrics { grid-template-columns:repeat(3,minmax(0,1fr)); }
+ .mailing-deliveries li { grid-template-columns:minmax(0,1fr); padding:20px 16px; }
+ .delivery-result { align-items:flex-start; }
+ .mailing-resume { flex-direction:column; gap:8px; align-items:stretch; }
+ .mailing-resume button { width:100%; }
+}
+
+/* Layout only: native chat components own their appearance in Shadow DOM. */
+.assistant-chat-mount { display:block; width:100%; min-width:0; height:max(520px,calc(100dvh - 190px)); }
+@media(max-width:640px) { .assistant-chat-mount { height:760px; max-height:95dvh; } .admin-nav a { padding:10px 8px; font-size:13px; } }

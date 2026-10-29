@@ -8,15 +8,17 @@ import (
 	"unicode/utf8"
 )
 
-const (
-	FullPrice  = 2000
-	ChildPrice = 1000
+var (
+	ErrNotFound  = errors.New("not found")
+	ErrConflict  = errors.New("event conflict")
+	ErrSoldOut   = errors.New("not enough seats")
+	ErrExpired   = errors.New("checkout expired")
+	ErrCancelled = errors.New("order cancelled")
 )
 
-var (
-	ErrNotFound = errors.New("checkout not found")
-	ErrSoldOut  = errors.New("not enough seats")
-	ErrExpired  = errors.New("checkout expired")
+const (
+	OrderActive    = "active"
+	OrderCancelled = "cancelled"
 )
 
 type ValidationError struct {
@@ -30,6 +32,7 @@ type ParticipantInput struct {
 	Age  *int   `json:"age"`
 }
 type OrderInput struct {
+	EventID         string             `json:"event_id"`
 	Email           string             `json:"email"`
 	Participants    []ParticipantInput `json:"participants"`
 	SimulateSoldOut bool               `json:"simulate_sold_out"`
@@ -41,6 +44,13 @@ type Participant struct {
 	Price      int    `json:"price"`
 }
 type Event struct {
+	Description string `json:"description"`
+	Category    string `json:"category"`
+	Tagline     string `json:"tagline"`
+	CoverURL    string `json:"cover_url"`
+	Timezone    string `json:"timezone"`
+	Capacity    int    `json:"capacity"`
+	Sold        int    `json:"sold"`
 	ID          string `json:"id"`
 	Title       string `json:"title"`
 	Date        string `json:"date"`
@@ -51,6 +61,8 @@ type Event struct {
 	DemoEnabled bool   `json:"demo_enabled"`
 }
 type Checkout struct {
+	EventID      string        `json:"event_id"`
+	Event        *Event        `json:"event"`
 	ID           string        `json:"id"`
 	Email        string        `json:"email"`
 	Participants []Participant `json:"participants"`
@@ -58,6 +70,9 @@ type Checkout struct {
 	ExpiresAt    string        `json:"expires_at"`
 }
 type Order struct {
+	Status       string        `json:"status"`
+	EventID      string        `json:"event_id"`
+	Event        *Event        `json:"event"`
 	ID           string        `json:"id"`
 	Number       string        `json:"number"`
 	Email        string        `json:"email"`
@@ -67,7 +82,7 @@ type Order struct {
 }
 
 // PriceOrder owns all ticket and accompaniment rules. Prices are whole rubles.
-func PriceOrder(input OrderInput) ([]Participant, int, error) {
+func PriceOrder(input OrderInput, event Event) ([]Participant, int, error) {
 	fields := map[string]string{}
 	if len(input.Participants) < 1 || len(input.Participants) > 4 {
 		fields["participants"] = "В заказе должно быть от 1 до 4 участников."
@@ -90,9 +105,9 @@ func PriceOrder(input OrderInput) ([]Participant, int, error) {
 			fields[key+".age"] = "Укажите возраст целым числом от 0 до 120 лет."
 			continue
 		}
-		age, price, ticket := *p.Age, FullPrice, "full"
+		age, price, ticket := *p.Age, event.FullPrice, "full"
 		if age < 14 {
-			price, ticket = ChildPrice, "child"
+			price, ticket = event.ChildPrice, "child"
 		}
 		if age < 18 {
 			hasMinor = true

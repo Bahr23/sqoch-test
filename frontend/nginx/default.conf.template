@@ -1,18 +1,55 @@
+limit_req_zone $binary_remote_addr zone=admin_login:10m rate=5r/m;
+
 server {
- listen 80;
+ listen 80 default_server;
  server_name _;
  root /usr/share/nginx/html;
  index index.html;
  resolver 127.0.0.11 valid=10s ipv6=off;
+ location /internal/ { return 404; }
+ location /api/admin { return 404; }
+ location = /admin.html { return 404; }
  location /api/ {
   set $api_backend http://backend:${API_PORT};
   proxy_pass $api_backend;
-  proxy_set_header Host $host;
+  proxy_set_header Host $http_host;
   proxy_set_header X-Real-IP $remote_addr;
   proxy_connect_timeout 3s;
   proxy_read_timeout 5s;
  }
- location / {
-  try_files $uri $uri/ /index.html;
+ location / { try_files $uri $uri/ /index.html; }
+}
+
+server {
+ listen 80;
+ server_name ${ADMIN_HOST};
+ root /usr/share/nginx/html;
+ index admin.html;
+ resolver 127.0.0.11 valid=10s ipv6=off;
+ add_header X-Frame-Options DENY always;
+ add_header X-Content-Type-Options nosniff always;
+ add_header Referrer-Policy same-origin always;
+ add_header Cache-Control no-store always;
+ location /internal/ { return 404; }
+ location = /api/admin/login {
+  limit_req zone=admin_login burst=5 nodelay;
+  limit_req_status 429;
+  set $api_backend http://backend:${API_PORT};
+  proxy_pass $api_backend;
+  proxy_set_header Host $http_host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_connect_timeout 3s;
+  proxy_read_timeout 5s;
  }
+ location /api/admin/ {
+  set $api_backend http://backend:${API_PORT};
+  proxy_pass $api_backend;
+  proxy_set_header Host $http_host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_connect_timeout 3s;
+  proxy_read_timeout 5s;
+ }
+ location /api/ { return 404; }
+ location = /index.html { return 404; }
+ location / { try_files $uri $uri/ /admin.html; }
 }

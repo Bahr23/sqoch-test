@@ -13,6 +13,7 @@ import (
 	"sqoch-ticket/backend/internal/usecase"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestBookingAPI(t *testing.T) {
@@ -30,11 +31,11 @@ func TestBookingAPI(t *testing.T) {
 		body   string
 		status int
 	}{
-		{`{"email":"a@b.ru","participants":[{"name":"Анна","age":18}]}`, 201},
-		{`{"email":"a@b.ru","participants":[{"name":"Анна","age":17}]}`, 422},
-		{`{"email":"a@b.ru","participants":[{"name":"Анна","age":18.5}]}`, 400},
-		{`{"email":"a@b.ru","participants":[{"name":"Анна","age":18}],"total":1}`, 400},
-		{`{"email":"a@b.ru","participants":[{"name":"Анна","age":18}]} {}`, 400},
+		{`{"event_id":"b9264c68-9de5-4aa1-83bd-9b3e6fa72cf1","email":"a@b.ru","participants":[{"name":"Анна","age":18}]}`, 201},
+		{`{"event_id":"b9264c68-9de5-4aa1-83bd-9b3e6fa72cf1","email":"a@b.ru","participants":[{"name":"Анна","age":17}]}`, 422},
+		{`{"event_id":"b9264c68-9de5-4aa1-83bd-9b3e6fa72cf1","email":"a@b.ru","participants":[{"name":"Анна","age":18.5}]}`, 400},
+		{`{"event_id":"b9264c68-9de5-4aa1-83bd-9b3e6fa72cf1","email":"a@b.ru","participants":[{"name":"Анна","age":18}],"total":1}`, 400},
+		{`{"event_id":"b9264c68-9de5-4aa1-83bd-9b3e6fa72cf1","email":"a@b.ru","participants":[{"name":"Анна","age":18}]} {}`, 400},
 	} {
 		r := httptest.NewRecorder()
 		handler.ServeHTTP(r, httptest.NewRequest("POST", "/api/checkouts", strings.NewReader(tc.body)))
@@ -43,7 +44,7 @@ func TestBookingAPI(t *testing.T) {
 		}
 	}
 	r := httptest.NewRecorder()
-	handler.ServeHTTP(r, httptest.NewRequest("POST", "/api/checkouts", strings.NewReader(`{"email":"a@b.ru","participants":[{"name":"Анна","age":18},{"name":"Маша","age":13}],"simulate_sold_out":true}`)))
+	handler.ServeHTTP(r, httptest.NewRequest("POST", "/api/checkouts", strings.NewReader(`{"event_id":"b9264c68-9de5-4aa1-83bd-9b3e6fa72cf1","email":"a@b.ru","participants":[{"name":"Анна","age":18},{"name":"Маша","age":13}],"simulate_sold_out":true}`)))
 	var q domain.Checkout
 	if err := json.Unmarshal(r.Body.Bytes(), &q); err != nil {
 		t.Fatal(err)
@@ -55,5 +56,19 @@ func TestBookingAPI(t *testing.T) {
 	handler.ServeHTTP(confirm, httptest.NewRequest("POST", "/api/checkouts/"+q.ID+"/confirm", nil))
 	if confirm.Code != 409 {
 		t.Fatalf("expected conflict, got %d", confirm.Code)
+	}
+	if _, err := sqlite.SeedDemoOrders(ctx, db, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	cancelled := httptest.NewRecorder()
+	handler.ServeHTTP(cancelled, httptest.NewRequest("POST", "/api/checkouts/demo-orders-v1-1-03-checkout/confirm", nil))
+	var problem struct {
+		Code string `json:"code"`
+	}
+	if err := json.Unmarshal(cancelled.Body.Bytes(), &problem); err != nil {
+		t.Fatal(err)
+	}
+	if cancelled.Code != 409 || problem.Code != "cancelled" {
+		t.Fatalf("cancelled order returned as success: %d %s", cancelled.Code, cancelled.Body.String())
 	}
 }

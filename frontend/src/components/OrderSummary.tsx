@@ -41,20 +41,13 @@ export function OrderSummary({
     (complete ? full * event.full_price + child * event.child_price : null);
   return (
     <aside className="order-summary" aria-label="Состав и стоимость заказа">
-      <div className="event-art" aria-hidden="true">
-        <div className="art-orbit orbit-one" />
-        <div className="art-orbit orbit-two" />
-        <div className="art-planet" />
-        <span className="art-label">SQOCH / LIVE</span>
-        <span className="art-caption">ВЫЙТИ ЗА РАМКИ</span>
-        <span className="art-star">✦</span>
-      </div>
+      <EventArt event={event} />
       <div className="summary-content">
-        <p className="eyebrow">НАУКА · МУЗЫКА · ОТКРЫТИЯ</p>
+        <p className="eyebrow">{event.category}</p>
         <h2>{event.title}</h2>
         <p className="event-meta">
           <span aria-hidden="true">◷</span>
-          {eventDate(event.date)} · МСК
+          {eventDate(event.date,event.timezone)}
         </p>
         <p className="event-meta">
           <span aria-hidden="true">⌖</span>
@@ -97,4 +90,11 @@ export function OrderSummary({
       </div>
     </aside>
   );
+}
+
+export function EventArt({event}: {event: Event}) {
+  return <div className="event-art" aria-hidden="true">
+    {event.cover_url ? <img className="event-cover" src={event.cover_url} alt="" loading="lazy" onError={e=>{e.currentTarget.style.display="none"}}/> : <><div className="art-orbit orbit-one"/><div className="art-orbit orbit-two"/><div className="art-planet"/></>}
+    <span className="art-label">{event.category}</span><span className="art-caption">{event.tagline}</span>
+  </div>;
 }

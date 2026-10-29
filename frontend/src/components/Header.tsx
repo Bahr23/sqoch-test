@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-export function Header() {
+import type { ReactNode } from "react";
+
+export function Header({ label = "Демо-мероприятие", navigation }: { label?: string; navigation?: ReactNode }) {
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     try {
       return localStorage.getItem("sqoch-theme") === "light" ? "light" : "dark";
@@ -19,7 +21,7 @@ export function Header() {
     }
   }, [theme]);
   return (
-    <header className="site-header">
+    <header className={`site-header${navigation ? " site-header-with-nav" : ""}`}>
       <a className="brand" href="/" aria-label="Sqoch Ticket — главная">
         <img
           className="brand-icon"
@@ -30,10 +32,11 @@ export function Header() {
         />
         Sqoch<span className="brand-light">ticket</span>
       </a>
+      {navigation}
       <div className="header-actions">
         <span className="tag">
           <span className="dot" />
-          Демо-мероприятие
+          {label}
         </span>
         <button
           className="theme-toggle"

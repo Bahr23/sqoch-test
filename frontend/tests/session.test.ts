@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { decodeSession } from "../src/session.ts";
+import { decodeSession, readSession, saveSession } from "../src/session.ts";
 import { checkoutExpired, parseAge, validate } from "../src/types.ts";
 const people = [{ id: "person-1", name: "Анна", age: "18" }];
 const quote = {
@@ -92,4 +92,30 @@ test("checkout expiry switches exactly at the deadline", () => {
   assert.equal(checkoutExpired(quote.expires_at, end - 1), false);
   assert.equal(checkoutExpired(quote.expires_at, end), true);
   assert.equal(checkoutExpired(quote.expires_at, end + 1), true);
+});
+
+test("restore event-specific prices beyond the original mock tariffs", () => {
+  const restored = decodeSession(JSON.stringify({ ...session, quote: {
+    ...quote, total: 12000, participants: [{ name: "Анна", age: 18, ticket_type: "full", price: 12000 }],
+  }}));
+  assert.equal(restored?.quote?.total, 12000);
+  assert.equal(restored?.step, "review");
+});
+
+test("booking drafts are isolated by event UUID", () => {
+  const storage = new Map<string, string>();
+  const original = Object.getOwnPropertyDescriptor(globalThis, "sessionStorage");
+  Object.defineProperty(globalThis, "sessionStorage", { configurable: true, value: {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => storage.set(key, value),
+  }});
+  try {
+    const value = decodeSession(JSON.stringify(session))!;
+    assert.equal(saveSession(value, "event-a"), true);
+    assert.equal(readSession("event-b"), null);
+    assert.equal(readSession("event-a")?.quote?.id, quote.id);
+  } finally {
+    if (original) Object.defineProperty(globalThis, "sessionStorage", original);
+    else Reflect.deleteProperty(globalThis, "sessionStorage");
+  }
 });

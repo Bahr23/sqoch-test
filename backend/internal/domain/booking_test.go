@@ -34,7 +34,7 @@ func TestPriceAndAccompanimentBoundaries(t *testing.T) {
 		{"age above maximum", []int{121}, 0, "participants.0.age"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			people, total, err := domain.PriceOrder(input(tc.ages...))
+			people, total, err := domain.PriceOrder(input(tc.ages...), domain.Event{FullPrice: 2000, ChildPrice: 1000})
 			if tc.invalid != "" {
 				var invalid *domain.ValidationError
 				if !errors.As(err, &invalid) || invalid.Fields[tc.invalid] == "" {
@@ -53,7 +53,7 @@ func TestPriceAndAccompanimentBoundaries(t *testing.T) {
 }
 func TestMissingAndInvalidFields(t *testing.T) {
 	req := domain.OrderInput{Email: "not an email", Participants: []domain.ParticipantInput{{Name: "   "}}}
-	_, _, err := domain.PriceOrder(req)
+	_, _, err := domain.PriceOrder(req, domain.Event{FullPrice: 2000, ChildPrice: 1000})
 	var invalid *domain.ValidationError
 	if !errors.As(err, &invalid) {
 		t.Fatal(err)
